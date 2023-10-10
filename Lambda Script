@@ -1,0 +1,61 @@
+#Python
+import json
+
+def prepareResponse(event, msgText):
+    response = {
+        "sessionState": {
+            "dialogAction": {
+                "type": "Close"
+            },
+            "intent": {
+                "name": event['sessionState']['intent']['name'],
+                "state": "Fulfilled"
+            }
+        },
+        "messages": [
+            {
+                "contentType": "PlainText",
+                "content": msgText
+            }
+        ]
+    }
+    return response
+
+def cancelIceCreamOrder(event):
+    msgText = "Order has been canceled"
+    return prepareResponse(event, msgText)
+
+def createIceCreamOrder(event):
+    firstName = event['sessionState']['intent']['slots']['name']['value']['interpretedValue']
+    iceCreamFlavor = event['sessionState']['intent']['slots']['flavor']['value']['interpretedValue']
+    iceCreamSize = event['sessionState']['intent']['slots']['size']['value']['interpretedValue']
+    
+    msgText = f"Your Order for {iceCreamSize} {iceCreamFlavor} IceCream has been placed with Order#: 7255"
+    return prepareResponse(event, msgText)
+
+def confirmOrder(event):
+    confirmation = event['sessionState']['intent']['slots'].get('confirmation', {}).get('value', {}).get('interpretedValue', '').lower()
+    if confirmation == 'yes':
+        return prepareResponse(event, "Your order has been confirmed!")
+    elif confirmation == 'no':
+        return prepareResponse(event, "Your order has been canceled.")
+    else:
+        return prepareResponse(event, "Invalid confirmation response. Please say 'Yes' or 'No'.")
+
+def lambda_handler(event, context):
+    try:
+        intentName = event['sessionState']['intent']['name']
+        print(f"Received intent: {intentName}")  # Logging the intent name for debugging
+        
+        if intentName == 'Create-Order-Intent':
+            if 'confirmation' in event['sessionState']['intent']['slots']:
+                return confirmOrder(event)
+            else:
+                return createIceCreamOrder(event)
+        elif intentName == 'Cancel-Order-Intent':
+            return cancelIceCreamOrder(event)
+        else:
+            raise Exception(f'The intent : {intentName} is not supported')
+    except Exception as e:
+        print(f"Error in lambda_handler: {e}")
+        return prepareResponse(event, "An error occurred. Please try again.")
